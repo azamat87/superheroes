@@ -5,6 +5,7 @@ import 'package:superheroes/blocs/main_bloc.dart';
 import 'package:superheroes/pages/superhero_page.dart';
 import 'package:superheroes/resources/superheroes_colors.dart';
 import 'package:superheroes/resources/superheroes_images.dart';
+import 'package:superheroes/widgets/action_button.dart';
 import 'package:superheroes/widgets/info_with_button.dart';
 import 'package:superheroes/widgets/no_favorites_widget.dart';
 import 'package:superheroes/widgets/superhero_card.dart';
@@ -57,7 +58,6 @@ class MainPageContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
 
     return Stack(
       children: [
@@ -78,6 +78,7 @@ class SearchWidget extends StatefulWidget {
 
 class _SearchWidgetState extends State<SearchWidget> {
   final TextEditingController controller = TextEditingController();
+  bool haveSearchedText = false;
 
   @override
   void initState() {
@@ -87,6 +88,12 @@ class _SearchWidgetState extends State<SearchWidget> {
       MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
       controller.addListener(() {
         bloc.updateText(controller.text);
+        final haveText = controller.text.isNotEmpty;
+        if (haveSearchedText != haveText) {
+          setState(() {
+            haveSearchedText = haveText;
+          });
+        }
       });
     });
   }
@@ -96,6 +103,9 @@ class _SearchWidgetState extends State<SearchWidget> {
     final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
 
     return TextField(
+      cursorColor: Colors.white,
+      textInputAction: TextInputAction.search,
+      textCapitalization: TextCapitalization.words,
       controller: controller,
       onChanged: (text) => {bloc.updateText(text)},
       style: TextStyle(
@@ -121,8 +131,15 @@ class _SearchWidgetState extends State<SearchWidget> {
         ),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Colors.white24)),
+          borderRadius: BorderRadius.circular(8),
+          borderSide: haveSearchedText
+              ? BorderSide(color: Colors.white, width: 2)
+              : BorderSide(color: Colors.white24),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.white, width: 2),
+        ),
       ),
     );
   }
@@ -146,13 +163,29 @@ class MainPageStateWidget extends StatelessWidget {
           case MainPageState.loading:
             return LoadingIndicator();
           case MainPageState.noFavorites:
-            return NoFavoritesWidget();
+            return Stack(
+              children: [
+                NoFavoritesWidget(),
+                Align(
+                    alignment: Alignment.bottomCenter,
+                    child: ActionButton(
+                        text: "Remove", onTap: bloc.removeFavorite))
+              ],
+            );
           case MainPageState.minSymbols:
             return MinSymbolsWidget();
           case MainPageState.favorites:
-            return SuperheroesList(
-              title: "Your favorites",
-              stream: bloc.observeFavoriteSuperheroes(),
+            return Stack(
+              children: [
+                SuperheroesList(
+                  title: "Your favorites",
+                  stream: bloc.observeFavoriteSuperheroes(),
+                ),
+                Align(
+                    alignment: Alignment.bottomCenter,
+                    child: ActionButton(
+                        text: "Remove", onTap: bloc.removeFavorite))
+              ],
             );
           case MainPageState.nothingFound:
             return NothingFoundWidget();
@@ -192,6 +225,7 @@ class SuperheroesList extends StatelessWidget {
 
           final List<SuperheroInfo> superheroes = snapshot.data!;
           return ListView.separated(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             itemCount: superheroes.length + 1,
             itemBuilder: (BuildContext context, int index) {
               if (index == 0) {
@@ -211,9 +245,7 @@ class SuperheroesList extends StatelessWidget {
               return Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: SuperheroCard(
-                    name: item.name,
-                    realName: item.realName,
-                    imageUrl: item.imageUrl,
+                    superheroInfo: item,
                     onTap: () {
                       Navigator.of(context).push(MaterialPageRoute(
                           builder: (context) =>

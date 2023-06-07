@@ -6,8 +6,7 @@ class MainBloc {
   static const minSymbols = 3;
 
   final BehaviorSubject<MainPageState> stateSubject = BehaviorSubject();
-  final favoritesSuperheroesSubject =
-      BehaviorSubject<List<SuperheroInfo>>.seeded(SuperheroInfo.mocked);
+  final favoritesSuperheroesSubject = BehaviorSubject<List<SuperheroInfo>>.seeded(SuperheroInfo.mocked);
   final searchedSuperheroesSubject = BehaviorSubject<List<SuperheroInfo>>();
   final currentTextSubject = BehaviorSubject<String>.seeded("");
   StreamSubscription? textSubscription;
@@ -76,6 +75,15 @@ class MainBloc {
     currentTextSubject.add(text ?? "");
   }
 
+  void removeFavorite() {
+    final List<SuperheroInfo> current = favoritesSuperheroesSubject.value;
+    if (current.isEmpty) {
+      favoritesSuperheroesSubject.add(SuperheroInfo.mocked);
+    } else {
+      favoritesSuperheroesSubject.add(current.sublist(0, current.length -1));
+    }
+  }
+
   void dispose() {
     stateSubject.close();
     favoritesSuperheroesSubject.close();
@@ -86,7 +94,10 @@ class MainBloc {
 
   Future<List<SuperheroInfo>> search(String text) async {
     await Future.delayed(const Duration(seconds: 1));
-    return SuperheroInfo.mocked;
+    return SuperheroInfo.mocked
+        .where((element) =>
+            element.name.toLowerCase().contains(text.toLowerCase()))
+        .toList();
   }
 }
 
