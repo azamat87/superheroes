@@ -1,21 +1,29 @@
 import 'dart:async';
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+import 'package:superheroes/model/superhero.dart';
 
 class MainBloc {
   static const minSymbols = 3;
 
   final BehaviorSubject<MainPageState> stateSubject = BehaviorSubject();
-  final favoritesSuperheroesSubject = BehaviorSubject<List<SuperheroInfo>>.seeded(SuperheroInfo.mocked);
+  final favoritesSuperheroesSubject =
+      BehaviorSubject<List<SuperheroInfo>>.seeded(SuperheroInfo.mocked);
   final searchedSuperheroesSubject = BehaviorSubject<List<SuperheroInfo>>();
   final currentTextSubject = BehaviorSubject<String>.seeded("");
   StreamSubscription? textSubscription;
   StreamSubscription? searchSubscription;
 
+  http.Client? client;
+
   // Stream<MainPageState>? observeMainPageState() => stateSubject;
   // StreamSubscription<MainPageState>? stateSubscription;
 
-  MainBloc() {
+  MainBloc({this.client}) {
     stateSubject.add(MainPageState.noFavorites);
     textSubscription =
         Rx.combineLatest2<String, List<SuperheroInfo>, MainPageStateInfo>(
@@ -80,7 +88,7 @@ class MainBloc {
     if (current.isEmpty) {
       favoritesSuperheroesSubject.add(SuperheroInfo.mocked);
     } else {
-      favoritesSuperheroesSubject.add(current.sublist(0, current.length -1));
+      favoritesSuperheroesSubject.add(current.sublist(0, current.length - 1));
     }
   }
 
@@ -90,14 +98,31 @@ class MainBloc {
     searchedSuperheroesSubject.close();
     currentTextSubject.close();
     searchSubscription?.cancel();
+    client?.close();
   }
 
   Future<List<SuperheroInfo>> search(String text) async {
     await Future.delayed(const Duration(seconds: 1));
-    return SuperheroInfo.mocked
-        .where((element) =>
-            element.name.toLowerCase().contains(text.toLowerCase()))
-        .toList();
+    final token = dotenv.env["SUPERHERO_TOKEN"];
+
+    final response = await (client ??= http.Client()).get(Uri.parse("https://superheroapi.com/api/$token/search/$text"));
+    final decode = json.decode(response.body);
+    if (decode['response'] == 'success') {
+      final List<dynamic> results = decode['results'];
+      final List<Superhero> superheroes = results.map((e) => Superhero.fromJson(e)).toList();
+      final List<SuperheroInfo> found = superheroes.map((e) {
+        return SuperheroInfo(
+            name: e.name,
+            realName: e.biography.fullName,
+            imageUrl: e.image.url);
+      }).toList();
+      return found;
+    } else if (decode['response'] == 'error') {
+      if (decode['error'] == 'character with given name not found') {
+        return [];
+      }
+    }
+    throw Exception("Unknown error happened");
   }
 }
 
