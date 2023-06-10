@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:superheroes/blocs/main_bloc.dart';
 import 'package:superheroes/resources/superheroes_colors.dart';
+import 'package:superheroes/resources/superheroes_images.dart';
 
 class SuperheroCard extends StatelessWidget {
   final SuperheroInfo superheroInfo;
   final VoidCallback onTap;
 
-  const SuperheroCard(
-      {super.key,
-      required this.superheroInfo,
-      required this.onTap,
-      });
+  const SuperheroCard({
+    super.key,
+    required this.superheroInfo,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,11 +28,32 @@ class SuperheroCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CachedNetworkImage(
-              imageUrl: superheroInfo.imageUrl,
+            Container(
+              color: Colors.white24,
               height: 70,
               width: 70,
-              fit: BoxFit.cover,
+              child: CachedNetworkImage(
+                imageUrl: superheroInfo.imageUrl,
+                height: 70,
+                width: 70,
+                fit: BoxFit.cover,
+                errorWidget: (context, url, err) {
+                  return Center(
+                      child: Image.asset(SuperheroesImages.unknown,
+                          width: 20, height: 62, fit: BoxFit.cover,));
+                },
+                progressIndicatorBuilder: (context, url, progress) {
+                  return Container(
+                    alignment: Alignment.center,
+                    height: 24,
+                    width: 24,
+                    child: CircularProgressIndicator(
+                      color: SuperheroesColors.blue,
+                      value: progress.progress,
+                    ),
+                  );
+                },
+              ),
             ),
             const SizedBox(
               width: 12,

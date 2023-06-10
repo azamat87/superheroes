@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:superheroes/resources/superheroes_colors.dart';
-import 'package:superheroes/resources/superheroes_images.dart';
 
 import 'action_button.dart';
 
@@ -13,6 +12,7 @@ class InfoWithButton extends StatelessWidget {
   final double imageHeight;
   final double imageWidth;
   final double imageTopPadding;
+  final VoidCallback onTap;
 
   const InfoWithButton(
       {super.key,
@@ -22,7 +22,8 @@ class InfoWithButton extends StatelessWidget {
       required this.assetImage,
       required this.imageHeight,
       required this.imageWidth,
-      required this.imageTopPadding});
+      required this.imageTopPadding,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +67,7 @@ class InfoWithButton extends StatelessWidget {
         const SizedBox(
           height: 30,
         ),
-        ActionButton(text: buttonText, onTap: () {})
+        ActionButton(text: buttonText, onTap: onTap)
       ],
     );
   }

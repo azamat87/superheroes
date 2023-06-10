@@ -37,7 +37,7 @@ class MainBlocHolder extends InheritedWidget {
 }
 
 class _MainPageState extends State<MainPage> {
-  late MainBloc bloc ;
+  late MainBloc bloc;
 
   @override
   void initState() {
@@ -62,25 +62,45 @@ class _MainPageState extends State<MainPage> {
   }
 }
 
-class MainPageContent extends StatelessWidget {
-  const MainPageContent({super.key});
+class MainPageContent extends StatefulWidget {
+  @override
+  State<MainPageContent> createState() => _MainPageContentState();
+}
+
+class _MainPageContentState extends State<MainPageContent> {
+  late final FocusNode _searchFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode = FocusNode();
+  }
 
   @override
   Widget build(BuildContext context) {
-
     return Stack(
       children: [
-        MainPageStateWidget(),
+        MainPageStateWidget(focusNode: _searchFocusNode,),
         Padding(
           padding: const EdgeInsets.only(right: 16, left: 16, top: 12),
-          child: SearchWidget(),
+          child: SearchWidget(searchFieldFocusNode: _searchFocusNode),
         )
       ],
     );
   }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _searchFocusNode.dispose();
+  }
 }
 
 class SearchWidget extends StatefulWidget {
+  final FocusNode searchFieldFocusNode;
+
+  const SearchWidget({super.key, required this.searchFieldFocusNode});
+
   @override
   State<SearchWidget> createState() => _SearchWidgetState();
 }
@@ -112,6 +132,7 @@ class _SearchWidgetState extends State<SearchWidget> {
     final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
 
     return TextField(
+      focusNode: widget.searchFieldFocusNode,
       cursorColor: Colors.white,
       textInputAction: TextInputAction.search,
       textCapitalization: TextCapitalization.words,
@@ -155,7 +176,9 @@ class _SearchWidgetState extends State<SearchWidget> {
 }
 
 class MainPageStateWidget extends StatelessWidget {
-  const MainPageStateWidget({super.key});
+  final FocusNode focusNode;
+
+  const MainPageStateWidget({super.key, required this.focusNode});
 
   @override
   Widget build(BuildContext context) {
@@ -174,7 +197,7 @@ class MainPageStateWidget extends StatelessWidget {
           case MainPageState.noFavorites:
             return Stack(
               children: [
-                NoFavoritesWidget(),
+                NoFavoritesWidget(focusNode: focusNode,),
                 Align(
                     alignment: Alignment.bottomCenter,
                     child: ActionButton(
@@ -197,7 +220,7 @@ class MainPageStateWidget extends StatelessWidget {
               ],
             );
           case MainPageState.nothingFound:
-            return NothingFoundWidget();
+            return NothingFoundWidget(focusNode: focusNode,);
           case MainPageState.loadingError:
             return LoadingErrorWidget();
           case MainPageState.searchResults:
@@ -294,32 +317,40 @@ class LoadingErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    
+    final MainBloc mainBloc = Provider.of<MainBloc>(context, listen: false);
     return Center(
         child: InfoWithButton(
-            title: "Error happened",
-            subtitle: "Please, try again",
-            buttonText: "Retry",
-            assetImage: SuperheroesImages.superman,
-            imageHeight: 106,
-            imageWidth: 126,
-            imageTopPadding: 22));
+      title: "Error happened",
+      subtitle: "Please, try again",
+      buttonText: "Retry",
+      assetImage: SuperheroesImages.superman,
+      imageHeight: 106,
+      imageWidth: 126,
+      imageTopPadding: 22,
+      onTap: mainBloc.retry,
+    ));
   }
 }
 
 class NothingFoundWidget extends StatelessWidget {
-  const NothingFoundWidget({Key? key}) : super(key: key);
+  final FocusNode focusNode;
+
+  const NothingFoundWidget({Key? key, required this.focusNode}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Center(
         child: InfoWithButton(
-            title: "Nothing found",
-            subtitle: "Search for something else",
-            buttonText: "Search",
-            assetImage: SuperheroesImages.hulk,
-            imageHeight: 112,
-            imageWidth: 84,
-            imageTopPadding: 16));
+      title: "Nothing found",
+      subtitle: "Search for something else",
+      buttonText: "Search",
+      assetImage: SuperheroesImages.hulk,
+      imageHeight: 112,
+      imageWidth: 84,
+      imageTopPadding: 16,
+      onTap: () => focusNode.requestFocus(),
+    ));
   }
 }
 
