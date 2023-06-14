@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:provider/provider.dart';
 import 'package:superheroes/blocs/main_bloc.dart';
+import 'package:superheroes/model/superhero.dart';
 import 'package:superheroes/pages/superhero_page.dart';
 import 'package:superheroes/resources/superheroes_colors.dart';
 import 'package:superheroes/resources/superheroes_images.dart';
@@ -31,7 +32,7 @@ class MainBlocHolder extends InheritedWidget {
 
   static MainBlocHolder of(final BuildContext context) {
     final InheritedElement element =
-        context.getElementForInheritedWidgetOfExactType<MainBlocHolder>()!;
+    context.getElementForInheritedWidgetOfExactType<MainBlocHolder>()!;
     return element.widget as MainBlocHolder;
   }
 }
@@ -80,7 +81,9 @@ class _MainPageContentState extends State<MainPageContent> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        MainPageStateWidget(focusNode: _searchFocusNode,),
+        MainPageStateWidget(
+          focusNode: _searchFocusNode,
+        ),
         Padding(
           padding: const EdgeInsets.only(right: 16, left: 16, top: 12),
           child: SearchWidget(searchFieldFocusNode: _searchFocusNode),
@@ -195,32 +198,18 @@ class MainPageStateWidget extends StatelessWidget {
           case MainPageState.loading:
             return LoadingIndicator();
           case MainPageState.noFavorites:
-            return Stack(
-              children: [
-                NoFavoritesWidget(focusNode: focusNode,),
-                Align(
-                    alignment: Alignment.bottomCenter,
-                    child: ActionButton(
-                        text: "Remove", onTap: bloc.removeFavorite))
-              ],
-            );
+            return NoFavoritesWidget(focusNode: focusNode);
           case MainPageState.minSymbols:
             return MinSymbolsWidget();
           case MainPageState.favorites:
-            return Stack(
-              children: [
-                SuperheroesList(
-                  title: "Your favorites",
-                  stream: bloc.observeFavoriteSuperheroes(),
-                ),
-                Align(
-                    alignment: Alignment.bottomCenter,
-                    child: ActionButton(
-                        text: "Remove", onTap: bloc.removeFavorite))
-              ],
+            return SuperheroesList(
+              title: "Your favorites",
+              stream: bloc.observeFavoriteSuperheroes(),
             );
           case MainPageState.nothingFound:
-            return NothingFoundWidget(focusNode: focusNode,);
+            return NothingFoundWidget(
+              focusNode: focusNode,
+            );
           case MainPageState.loadingError:
             return LoadingErrorWidget();
           case MainPageState.searchResults:
@@ -231,9 +220,9 @@ class MainPageStateWidget extends StatelessWidget {
           default:
             return Center(
                 child: Text(
-              snapshot.data.toString(),
-              style: TextStyle(color: Colors.white),
-            ));
+                  snapshot.data.toString(),
+                  style: TextStyle(color: Colors.white),
+                ));
         }
       },
     );
@@ -261,35 +250,81 @@ class SuperheroesList extends StatelessWidget {
             itemCount: superheroes.length + 1,
             itemBuilder: (BuildContext context, int index) {
               if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(
-                      left: 16, right: 16, top: 90, bottom: 12),
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 24),
-                  ),
-                );
+                return ListTitleWidget(title: title);
               }
               final SuperheroInfo item = superheroes[index - 1];
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: SuperheroCard(
-                    superheroInfo: item,
-                    onTap: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) =>
-                              SuperheroPage(name: item.name)));
-                    }),
-              );
+              return ListTile(superhero: item);
             },
             separatorBuilder: (BuildContext context, int index) {
               return const SizedBox(height: 8);
             },
           );
         });
+  }
+}
+
+class ListTile extends StatelessWidget {
+
+  final SuperheroInfo superhero;
+
+  const ListTile({super.key, required this.superhero});
+
+  @override
+  Widget build(BuildContext context) {
+    final MainBloc bloc = Provider.of<MainBloc>(context, listen: false);
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Dismissible(
+        key: ValueKey(superhero.id),
+        child: SuperheroCard(
+            superheroInfo: superhero,
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => SuperheroPage(id: superhero.id)));
+            }),
+        background: Container(
+          height: 70,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            color: SuperheroesColors.red
+          ),
+          child: Text(
+            "Remove from favorites".toUpperCase(),
+            style: TextStyle(
+                fontSize: 12,
+                color: Colors.white,
+                fontWeight: FontWeight.w700
+            ),
+          ),
+        ),
+        onDismissed: (_) => bloc.removeFromFavorites(superhero.id),
+      ),
+    );
+  }
+
+
+}
+
+class ListTitleWidget extends StatelessWidget {
+  final String title;
+
+  const ListTitleWidget({super.key, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(
+          left: 16, right: 16, top: 90, bottom: 12),
+      child: Text(
+        title,
+        style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 24),
+      ),
+    );
   }
 }
 
@@ -317,40 +352,40 @@ class LoadingErrorWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
     final MainBloc mainBloc = Provider.of<MainBloc>(context, listen: false);
     return Center(
         child: InfoWithButton(
-      title: "Error happened",
-      subtitle: "Please, try again",
-      buttonText: "Retry",
-      assetImage: SuperheroesImages.superman,
-      imageHeight: 106,
-      imageWidth: 126,
-      imageTopPadding: 22,
-      onTap: mainBloc.retry,
-    ));
+          title: "Error happened",
+          subtitle: "Please, try again",
+          buttonText: "Retry",
+          assetImage: SuperheroesImages.superman,
+          imageHeight: 106,
+          imageWidth: 126,
+          imageTopPadding: 22,
+          onTap: mainBloc.retry,
+        ));
   }
 }
 
 class NothingFoundWidget extends StatelessWidget {
   final FocusNode focusNode;
 
-  const NothingFoundWidget({Key? key, required this.focusNode}) : super(key: key);
+  const NothingFoundWidget({Key? key, required this.focusNode})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Center(
         child: InfoWithButton(
-      title: "Nothing found",
-      subtitle: "Search for something else",
-      buttonText: "Search",
-      assetImage: SuperheroesImages.hulk,
-      imageHeight: 112,
-      imageWidth: 84,
-      imageTopPadding: 16,
-      onTap: () => focusNode.requestFocus(),
-    ));
+          title: "Nothing found",
+          subtitle: "Search for something else",
+          buttonText: "Search",
+          assetImage: SuperheroesImages.hulk,
+          imageHeight: 112,
+          imageWidth: 84,
+          imageTopPadding: 16,
+          onTap: () => focusNode.requestFocus(),
+        ));
   }
 }
 

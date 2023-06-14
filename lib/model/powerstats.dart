@@ -19,6 +19,33 @@ class Powerstats {
       required this.power,
       required this.combat});
 
+  bool isNotNull() {
+    return intelligence != "null" &&
+        strength != "null" &&
+        speed != "null" &&
+        durability != "null" &&
+        power != "null" &&
+        combat != "null";
+  }
+
+  double get intelligencePercent => convertStringToValue(intelligence);
+
+  double get strengthPercent => convertStringToValue(strength);
+
+  double get speedPercent => convertStringToValue(speed);
+
+  double get durabilityPercent => convertStringToValue(durability);
+
+  double get powerPercent => convertStringToValue(power);
+
+  double get combatPercent => convertStringToValue(combat);
+
+  double convertStringToValue(final String value) {
+    final intValue = int.tryParse(value);
+    if (intValue == null) return 0;
+    return intValue/100;
+  }
+
   factory Powerstats.fromJson(Map<String, dynamic> json) =>
       _$PowerstatsFromJson(json);
 
