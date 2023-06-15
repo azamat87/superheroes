@@ -11,7 +11,9 @@ import 'package:superheroes/model/superhero.dart';
 import 'package:superheroes/resources/superheroes_colors.dart';
 import 'package:http/http.dart' as http;
 import 'package:superheroes/resources/superheroes_icons.dart';
-import '../model/server_image.dart';
+import 'package:superheroes/resources/superheroes_images.dart';
+import 'package:superheroes/widgets/info_with_button.dart';
+import 'package:superheroes/widgets/superhero_card.dart';
 
 class SuperheroPage extends StatefulWidget {
   final http.Client? client;
@@ -55,6 +57,91 @@ class SuperheroContentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bloc = Provider.of<SuperheroBloc>(context, listen: false);
+    return StreamBuilder<SuperheroPageState>(
+      stream: bloc.observeSuperheroPageState(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data == null) {
+          return SizedBox.shrink();
+        }
+        final state = snapshot.data;
+        switch(state){
+          case SuperheroPageState.loading: {
+            return SuperheroLoadingWidget();
+          }
+          case SuperheroPageState.loaded: {
+            return SuperheroLoadedPage();
+          }
+          case SuperheroPageState.error:
+          default:
+            return SuperheroErrorWidget();
+        }
+      }
+    );
+  }
+}
+
+class SuperheroErrorWidget extends StatelessWidget {
+  const SuperheroErrorWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = Provider.of<SuperheroBloc>(context, listen: false);
+    return CustomScrollView(
+      slivers: [
+        const SliverAppBar(backgroundColor: SuperheroesColors.background,),
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.only(top: 60),
+            alignment: Alignment.topCenter,
+            child: InfoWithButton(
+              title: "Error happened",
+              subtitle: "Please, try again",
+              buttonText: "Retry",
+              assetImage: SuperheroesImages.superman,
+              imageHeight: 106,
+              imageWidth: 126,
+              imageTopPadding: 22,
+              onTap: bloc.retry,
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+}
+
+class SuperheroLoadingWidget extends StatelessWidget {
+  const SuperheroLoadingWidget({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomScrollView(
+      slivers: [
+        const SliverAppBar(backgroundColor: SuperheroesColors.background,),
+        SliverToBoxAdapter(
+          child: Container(
+            margin: const EdgeInsets.only(top: 60),
+            alignment: Alignment.topCenter,
+            height: 44,
+            width: 44,
+            child: const CircularProgressIndicator(
+              color: SuperheroesColors.blue,
+            ),
+          ),
+        )
+      ],
+    );
+  }
+
+}
+
+class SuperheroLoadedPage extends StatelessWidget {
+  const SuperheroLoadedPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final bloc = Provider.of<SuperheroBloc>(context, listen: false);
     return StreamBuilder<Superhero>(
         stream: bloc.superheroSubject,
         builder: (context, snapshot) {
@@ -74,6 +161,7 @@ class SuperheroContentPage extends StatelessWidget {
                     if (superhero.powerstats.isNotNull())
                       PowerstatsWidget(powerstats: superhero.powerstats),
                     BiographyWidget(biography: superhero.biography),
+                    const SizedBox(height: 30.5),
                   ],
                 ),
               )
@@ -83,6 +171,8 @@ class SuperheroContentPage extends StatelessWidget {
   }
 }
 
+
+
 class BiographyWidget extends StatelessWidget {
   final Biography biography;
 
@@ -91,12 +181,82 @@ class BiographyWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 300,
-      alignment: Alignment.center,
-      child: Text(
-        biography.toJson().toString(),
-        style: TextStyle(color: Colors.white),
+      margin: EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+          color: SuperheroesColors.indigo,
+          borderRadius: BorderRadius.circular(20)),
+      child: Stack(
+        children: [
+          Padding(
+            padding:
+                const EdgeInsets.only(right: 16, left: 16, top: 16, bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Text(
+                    "Bio".toUpperCase(),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: Colors.white),
+                  ),
+                ),
+                BioFields(title: "Full Name", text: biography.fullName),
+                const SizedBox(
+                  height: 19.5,
+                ),
+                BioFields(title: "Aliases", text: biography.aliases.join(", ")),
+                const SizedBox(
+                  height: 20,
+                ),
+                BioFields(
+                    title: "Place of birth", text: biography.placeOfBirth),
+              ],
+            ),
+          ),
+          if (biography.alignmentInfo != null)
+            Align(
+              alignment: Alignment.topRight,
+              child: AlignmentWidget(
+                alignmentInfo: biography.alignmentInfo!,
+                borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    bottomRight: Radius.circular(20)),
+              ),
+            )
+        ],
       ),
+    );
+  }
+}
+
+class BioFields extends StatelessWidget {
+  final String title;
+  final String text;
+
+  const BioFields({super.key, required this.title, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title.toUpperCase(),
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: SuperheroesColors.grey2),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          text,
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w400, color: Colors.white),
+        )
+      ],
     );
   }
 }
@@ -306,6 +466,22 @@ class SuperheroAppBar extends StatelessWidget {
         background: CachedNetworkImage(
           imageUrl: superhero.image.url,
           fit: BoxFit.cover,
+          placeholder: (_, url) {
+            return ColoredBox(
+              color: SuperheroesColors.indigo,
+            );
+          },
+          errorWidget: (context, url, error) {
+            return Container(
+              alignment: Alignment.center,
+              color: SuperheroesColors.indigo,
+              child: Image.asset(
+                SuperheroesImages.unknownBig,
+                height: 264,
+                width: 85,
+              ),
+            );
+          },
         ),
       ),
       centerTitle: true,
@@ -314,7 +490,6 @@ class SuperheroAppBar extends StatelessWidget {
 }
 
 class FavoriteButton extends StatelessWidget {
-
   const FavoriteButton({super.key});
 
   @override
@@ -329,7 +504,7 @@ class FavoriteButton extends StatelessWidget {
             !snapshot.hasData || snapshot.data == null || snapshot.data!;
         return GestureDetector(
           onTap: () =>
-          favorite ? bloc.removeFromFavorites() : bloc.addToFavorite(),
+              favorite ? bloc.removeFromFavorites() : bloc.addToFavorite(),
           child: Container(
             height: 52,
             width: 52,

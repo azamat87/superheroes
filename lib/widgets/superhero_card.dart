@@ -52,10 +52,15 @@ class SuperheroCard extends StatelessWidget {
                       fontSize: 14,
                       fontWeight: FontWeight.w400),
                 ),
-                if (superheroInfo.alignmentInfo != null)
-                  AlignmentWidget()
               ],
-            ))
+            )),
+            if (superheroInfo.alignmentInfo != null)
+              AlignmentWidget(
+                alignmentInfo: superheroInfo.alignmentInfo!,
+                borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(8),
+                    topLeft: Radius.circular(8)),
+              )
           ],
         ),
       ),
@@ -64,37 +69,34 @@ class SuperheroCard extends StatelessWidget {
 }
 
 class AlignmentWidget extends StatelessWidget {
-
   final AlignmentInfo alignmentInfo;
+  final BorderRadius borderRadius;
 
-  const AlignmentWidget({super.key, required this.alignmentInfo});
-
+  const AlignmentWidget(
+      {super.key, required this.alignmentInfo, required this.borderRadius});
 
   @override
   Widget build(BuildContext context) {
-
     return RotatedBox(
       quarterTurns: 1,
       child: Container(
+        height: 24,
+        width: 70,
         padding: EdgeInsets.symmetric(vertical: 6),
-        color: alignmentInfo.color,
         alignment: Alignment.center,
+        decoration: BoxDecoration(
+            color: alignmentInfo.color, borderRadius: borderRadius),
         child: Text(
           alignmentInfo.name.toUpperCase(),
           style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 10
-          ),
+              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 10),
         ),
       ),
     );
   }
-
 }
 
 class _AvatarWidget extends StatelessWidget {
-  
   final SuperheroInfo superheroInfo;
 
   const _AvatarWidget({super.key, required this.superheroInfo});
@@ -112,8 +114,12 @@ class _AvatarWidget extends StatelessWidget {
         fit: BoxFit.cover,
         errorWidget: (context, url, err) {
           return Center(
-              child: Image.asset(SuperheroesImages.unknown,
-                width: 20, height: 62, fit: BoxFit.cover,));
+              child: Image.asset(
+            SuperheroesImages.unknown,
+            width: 20,
+            height: 62,
+            fit: BoxFit.cover,
+          ));
         },
         progressIndicatorBuilder: (context, url, progress) {
           return Container(
@@ -129,5 +135,4 @@ class _AvatarWidget extends StatelessWidget {
       ),
     );
   }
-
 }

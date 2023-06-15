@@ -14,6 +14,7 @@ class SuperheroBloc {
   String id;
 
   final superheroSubject = BehaviorSubject<Superhero>();
+  final superheroPageStateSubject = BehaviorSubject<SuperheroPageState>();
   StreamSubscription? getFromFavoritesSubscription;
   StreamSubscription? requestSubscription;
   StreamSubscription? addToFavoriteSubscription;
@@ -23,16 +24,21 @@ class SuperheroBloc {
     getFromFavorites();
   }
 
-  Stream<Superhero> observeSuperhero() => superheroSubject;
+  Stream<Superhero> observeSuperhero() => superheroSubject.distinct();
+  Stream<SuperheroPageState> observeSuperheroPageState() => superheroPageStateSubject.distinct();
 
   Stream<bool> observeIsFavorite() =>
       FavoriteSuperheroStorage.getInstance().observeIsFavorites(id);
 
-  void requestSuperhero() {
+  void requestSuperhero(final bool isInFavorites) {
     requestSubscription?.cancel();
     requestSubscription = request().asStream().listen((superhero) {
       superheroSubject.add(superhero);
+      superheroPageStateSubject.add(SuperheroPageState.loaded);
     }, onError: (error, stackTrace) {
+      if (!isInFavorites) {
+        superheroPageStateSubject.add(SuperheroPageState.error);
+      }
       print("Error $error");
     });
   }
@@ -51,7 +57,9 @@ class SuperheroBloc {
 
     final decode = json.decode(response.body);
     if (decode['response'] == 'success') {
-      return Superhero.fromJson(decode);
+      final superhero = Superhero.fromJson(decode);
+      await FavoriteSuperheroStorage.getInstance().updateIfInFavorite(superhero);
+      return superhero;
     } else if (decode['response'] == 'error') {
       throw ApiException("Client error happened");
     }
@@ -66,8 +74,11 @@ class SuperheroBloc {
         .listen((superhero) {
       if (superhero != null) {
         superheroSubject.add(superhero);
+        superheroPageStateSubject.add(SuperheroPageState.loaded);
+      } else {
+        superheroPageStateSubject.add(SuperheroPageState.loading);
       }
-      requestSuperhero();
+      requestSuperhero(superhero != null);
     },
         onError: (error, stack) {
       print("error");
@@ -110,7 +121,17 @@ class SuperheroBloc {
     addToFavoriteSubscription?.cancel();
     removeFromFavoriteSubscription?.cancel();
     client?.close();
+
+    superheroSubject.close();
+    superheroPageStateSubject.close();
   }
 
-  void retry() {}
+  void retry() {
+    superheroPageStateSubject.add(SuperheroPageState.loading);
+    requestSuperhero(false);
+  }
+}
+
+enum SuperheroPageState {
+  loading, loaded, error
 }
